@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this file,
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#define DEBUG_ME 0
+#define DEBUG_ME 1
 #if DEBUG_ME != 0
 #define DEBUGME JS_CFUNC_DEF("debugMe", 2, js_debugMe ),
 extern void debugMe(const char*, const int);

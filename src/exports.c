@@ -21,8 +21,8 @@ static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name
     return str;
 }
 
-extern void printError(const char*, const char*, const char*);
-void evalInSandbox(const char* str) {
+extern void printError(const char*, const char*, const char*, int);
+void evalInSandbox(const char* str, int alertOnError) {
     JSValue result;
     JSValue except;
     const char* name, *message, *stack;
@@ -58,7 +58,7 @@ void evalInSandbox(const char* str) {
 
         JS_FreeValue(ctx, except);
 
-        printError(name, message, stack);
+        printError(name, message, stack, alertOnError);
         JS_FreeCString(ctx, name);
         JS_FreeCString(ctx, stack);
         JS_FreeCString(ctx, message);

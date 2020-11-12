@@ -123,12 +123,16 @@ mergeInto(LibraryManager.library, {
       window.console.log("DEBUGME", data);
     }
   },
-  printError: function(name_ptr, message_ptr, stack_ptr) {
+  printError: function(name_ptr, message_ptr, stack_ptr, alertOnError) {
     const name = UTF8ToString(name_ptr);
     const message = UTF8ToString(message_ptr);
     const stack = UTF8ToString(stack_ptr);
     const error = `Quickjs -- ${name}: ${message}\n${stack}`;
-    window.console.error(error);
+    if (alertOnError !== 0) {
+      window.alert(error);
+    } else {
+      window.console.error(error);
+    }
   },
   logMemUse: function(ptr) {
     const string = UTF8ToString(ptr);
