@@ -109,7 +109,7 @@ mergeInto(LibraryManager.library, {
     return stringToNewUTF8(result);
   },
   crackURL__deps: ["$stringToNewUTF8"],
-  debugMe: function(ptr) {
+  debugMe: function(ptr, alert) {
     const string = UTF8ToString(ptr);
     let data;
     try {
@@ -117,7 +117,18 @@ mergeInto(LibraryManager.library, {
     } catch (_) {
       data = string;
     }
-    window.console.log("DEBUGME", data);
+    if (alert !== 0) {
+      window.alert(string);
+    } else {
+      window.console.log("DEBUGME", data);
+    }
+  },
+  printError: function(name_ptr, message_ptr, stack_ptr) {
+    const name = UTF8ToString(name_ptr);
+    const message = UTF8ToString(message_ptr);
+    const stack = UTF8ToString(stack_ptr);
+    const error = `Quickjs -- ${name}: ${message}\n${stack}`;
+    window.console.error(error);
   },
   logMemUse: function(ptr) {
     const string = UTF8ToString(ptr);

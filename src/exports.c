@@ -11,8 +11,21 @@
 static JSRuntime* runtime = NULL;
 static JSContext* ctx = NULL;
 
+static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name) {
+    JSAtom prop = JS_NewAtom(ctx, name);
+    JSValue val = JS_GetProperty(ctx, obj, prop);
+    const char* str = JS_ToCString(ctx, val);
+    JS_FreeValue(ctx, val);
+    JS_FreeAtom(ctx, prop);
+
+    return str;
+}
+
+extern void printError(const char*, const char*, const char*);
 void evalInSandbox(const char* str) {
     JSValue result;
+    JSValue except;
+    const char* name, *message, *stack;
 
     if (!runtime) {
         runtime = JS_NewRuntime();
@@ -20,6 +33,37 @@ void evalInSandbox(const char* str) {
     }
 
     result = JS_Eval(ctx, str, strlen(str), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    if (JS_IsException(result)) {
+        except = JS_GetException(ctx);
+        name = getPropAsString(ctx, except, "name");
+        if (!name) {
+            JS_FreeValue(ctx, except);
+            return;
+        }
+
+        stack = getPropAsString(ctx, except, "stack");
+        if (!stack) {
+            JS_FreeCString(ctx, name);
+            JS_FreeValue(ctx, except);
+            return;
+        }
+
+        message = getPropAsString(ctx, except, "message");
+        if (!message) {
+            JS_FreeCString(ctx, name);
+            JS_FreeCString(ctx, stack);
+            JS_FreeValue(ctx, except);
+            return;
+        }
+
+        JS_FreeValue(ctx, except);
+
+        printError(name, message, stack);
+        JS_FreeCString(ctx, name);
+        JS_FreeCString(ctx, stack);
+        JS_FreeCString(ctx, message);
+    }
+
     JS_FreeValue(ctx, result);
 }
 
@@ -40,11 +84,11 @@ void dumpMemoryUse() {
     JSMemoryUsage stats;
     char *output;
     FILE *file;
-    
+
     if (!runtime) {
         return;
     }
-    
+
     output = (char*)malloc(sizeof(char) * 1024);
     file = fmemopen(output, 1024, "w");
 
@@ -53,6 +97,6 @@ void dumpMemoryUse() {
     fclose(file);
 
     logMemUse(output);
-    
+
     free((void*)output);
 }

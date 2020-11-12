@@ -4,20 +4,34 @@
 
 #define DEBUG_ME 0
 #if DEBUG_ME != 0
-#define DEBUGME JS_CFUNC_DEF("debugMe", 1, js_debugMe ),
-extern void debugMe(const char*);
+#define DEBUGME JS_CFUNC_DEF("debugMe", 2, js_debugMe ),
+extern void debugMe(const char*, const int);
 static JSValue js_debugMe(JSContext *ctx, JSValueConst this_val,
                           int argc, JSValueConst *argv)
 {
     const char *str;
-    JSValue json = JS_JSONStringify(ctx, argv[0], JS_UNDEFINED, JS_UNDEFINED);
+    int alert = 0;
+    JSValue json;
+
+    if (argc < 1 || argc > 2) {
+        return JS_EXCEPTION;
+    }
+
+    json = JS_JSONStringify(ctx, argv[0], JS_UNDEFINED, JS_UNDEFINED);
     if (JS_IsException(json)) {
         return JS_EXCEPTION;
     }
     str = JS_ToCString(ctx, json);
     JS_FreeValue(ctx, json);
+    if (!str) {
+        return JS_EXCEPTION;
+    }
 
-    debugMe(str);
+    if (argc == 2) {
+        alert = JS_ToBoolFree(ctx, argv[1]);
+    }
+
+    debugMe(str, alert);
 
     JS_FreeCString(ctx, str);
 
