@@ -18,17 +18,17 @@
  * THE SOFTWARE.
  */
 
+"use strict";
+
 const { ArgumentParser } = require("argparse");
 const fs = require("fs");
 const { spawn, exec } = require("child_process");
 const { resolve } = require("path");
 
 function execAndPrint(fun, args) {
-  const child = spawn(fun, args.split(" "), {stdio: "inherit"});
-  return new Promise((resolve) => {
-    child.on("close", () => {
-      resolve();
-    });
+  const child = spawn(fun, args.split(" "), { stdio: "inherit" });
+  return new Promise((res) => {
+    child.on("close", res);
   });
 }
 
@@ -37,10 +37,13 @@ function create() {
 }
 
 function build(path) {
-  const workingDir = resolve(".");
-  const uid = process.getuid();
-  const gid = process.getgid();
-  return execAndPrint("docker", `run -t -v ${path}:/js -v ${workingDir}:/code --rm --user ${uid}:${gid} qjs-sandbox`);
+  const workingDir = resolve("."),
+    uid = process.getuid(),
+    gid = process.getgid();
+  return execAndPrint(
+    "docker",
+    `run -t -v ${path}:/js -v ${workingDir}:/code --rm --user ${uid}:${gid} qjs-sandbox`
+  );
 }
 
 function compile(path) {
@@ -51,7 +54,10 @@ function compile(path) {
       return;
     }
     exec("docker images qjs-sandbox", (err, stdout) => {
-      const output = stdout.split("\n").map(line => line.trim()).filter(line => !!line);
+      const output = stdout
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => Boolean(line));
       if (output.length === 1) {
         create().then(() => {
           build(path);
@@ -60,42 +66,33 @@ function compile(path) {
         build(path);
       }
     });
-  })
+  });
 }
 
 const parser = new ArgumentParser({
-  description: "Build sandbox"
+  description: "Build sandbox",
 });
 
-parser.add_argument(
-  "-C",
-  "--create",
-  {
-    help: "Create the docker image",
-    action: "store_true",
-  }
-);
-parser.add_argument(
-  "-c",
-  "--compile",
-  {
-    help: "Compile the sandbox and output a js file",
-    action: "store_true",
-  }
-);
-parser.add_argument(
-  "-o",
-  "--output",
-  {
-    help: "Output directory",
-    default: ".",
-  }
-);
+parser.add_argument("-C", "--create", {
+  help: "Create the docker image",
+  action: "store_true",
+});
+parser.add_argument("-c", "--compile", {
+  help: "Compile the sandbox and output a js file",
+  action: "store_true",
+});
+parser.add_argument("-o", "--output", {
+  help: "Output directory",
+  default: ".",
+});
 
-const args = parser.parse_args()
+const args = parser.parse_args();
 if (args.create) {
-  create()
-}
-if (args.compile) {
-  compile(args.output)
+  create().then(() => {
+    if (args.compile) {
+      compile(args.output);
+    }
+  });
+} else if (args.compile) {
+  compile(args.output);
 }
