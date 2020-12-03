@@ -26,6 +26,9 @@
 
 static JSRuntime* runtime = NULL;
 static JSContext* ctx = NULL;
+static JSValue dispatchFunction = 0;
+
+extern void debugMe(const char*, int);
 
 static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name) {
     JSAtom prop = JS_NewAtom(ctx, name);
@@ -38,30 +41,23 @@ static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name
 }
 
 extern void printError(const char*, const char*, const char*, int);
-void evalInSandbox(const char* str, int alertOnError) {
-    JSValue result;
+static int buildAndPrintError(JSValueConst v, int alertOnError) {
     JSValue except;
     const char* name, *message, *stack;
 
-    if (!runtime) {
-        runtime = JS_NewRuntime();
-        ctx = JS_NewContext(runtime);
-    }
-
-    result = JS_Eval(ctx, str, strlen(str), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
-    if (JS_IsException(result)) {
+    if (JS_IsException(v)) {
         except = JS_GetException(ctx);
         name = getPropAsString(ctx, except, "name");
         if (!name) {
             JS_FreeValue(ctx, except);
-            return;
+            return 1;
         }
 
         stack = getPropAsString(ctx, except, "stack");
         if (!stack) {
             JS_FreeCString(ctx, name);
             JS_FreeValue(ctx, except);
-            return;
+            return 1;
         }
 
         message = getPropAsString(ctx, except, "message");
@@ -69,7 +65,7 @@ void evalInSandbox(const char* str, int alertOnError) {
             JS_FreeCString(ctx, name);
             JS_FreeCString(ctx, stack);
             JS_FreeValue(ctx, except);
-            return;
+            return 1;
         }
 
         JS_FreeValue(ctx, except);
@@ -78,17 +74,68 @@ void evalInSandbox(const char* str, int alertOnError) {
         JS_FreeCString(ctx, name);
         JS_FreeCString(ctx, stack);
         JS_FreeCString(ctx, message);
+
+        return 1;
     }
 
+    return 0;
+}
+
+void evalInSandbox(const char* str, int alertOnError) {
+    JSValue result;
+
+    if (!runtime) {
+        runtime = JS_NewRuntime();
+        ctx = JS_NewContext(runtime);
+    }
+
+    result = JS_Eval(ctx, str, strlen(str), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    buildAndPrintError(result, alertOnError);
     JS_FreeValue(ctx, result);
 }
 
-extern void clearIds();
+void initSandbox(const char* init, const char* cleanup, int alertOnError) {
+    JSValue result;
+
+    if (!runtime) {
+        runtime = JS_NewRuntime();
+        ctx = JS_NewContext(runtime);
+    }
+
+    result = JS_Eval(ctx, init, strlen(init), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    if (!buildAndPrintError(result, alertOnError)) {
+        dispatchFunction = result;
+    }
+    result = JS_Eval(ctx, cleanup, strlen(cleanup), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    buildAndPrintError(result, alertOnError);
+    JS_FreeValue(ctx, result);
+}
+
+void dispatchEvent(const char* str, int alertOnError) {
+    JSValue result;
+
+    if (!dispatchFunction) {
+        return;
+    }
+
+    result = JS_ParseJSON(ctx, str, strlen(str), "<event>");
+    if (buildAndPrintError(result, alertOnError)) {
+        JS_FreeValue(ctx, result);
+        return;
+    }
+
+    result = JS_Call(ctx, dispatchFunction, JS_UNDEFINED, 1, &result);
+    buildAndPrintError(result, alertOnError);
+    JS_FreeValue(ctx, result);
+}
+
 void nukeSandbox() {
     if (!runtime) {
         return;
     }
-    clearIds();
+    if (dispatchFunction) {
+        JS_FreeValue(ctx, dispatchFunction);
+    }
     JS_FreeContext(ctx);
     ctx = NULL;
     JS_FreeRuntime(runtime);
