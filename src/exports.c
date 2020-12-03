@@ -23,12 +23,11 @@
 #include <string.h>
 
 #include "quickjs.h"
+#include "cutils.h"
 
 static JSRuntime* runtime = NULL;
 static JSContext* ctx = NULL;
 static JSValue dispatchFunction = 0;
-
-extern void debugMe(const char*, int);
 
 static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name) {
     JSAtom prop = JS_NewAtom(ctx, name);
@@ -41,90 +40,55 @@ static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name
 }
 
 extern void printError(const char*, const char*, const char*, int);
-static int buildAndPrintError(JSValueConst v, int alertOnError) {
+static BOOL buildAndPrintError(JSValueConst v, int alertOnError) {
     JSValue except;
     const char* name, *message, *stack;
 
-    if (JS_IsException(v)) {
-        except = JS_GetException(ctx);
-        name = getPropAsString(ctx, except, "name");
-        if (!name) {
-            JS_FreeValue(ctx, except);
-            return 1;
-        }
-
-        stack = getPropAsString(ctx, except, "stack");
-        if (!stack) {
-            JS_FreeCString(ctx, name);
-            JS_FreeValue(ctx, except);
-            return 1;
-        }
-
-        message = getPropAsString(ctx, except, "message");
-        if (!message) {
-            JS_FreeCString(ctx, name);
-            JS_FreeCString(ctx, stack);
-            JS_FreeValue(ctx, except);
-            return 1;
-        }
-
-        JS_FreeValue(ctx, except);
-
-        printError(name, message, stack, alertOnError);
-        JS_FreeCString(ctx, name);
-        JS_FreeCString(ctx, stack);
-        JS_FreeCString(ctx, message);
-
-        return 1;
+    if (likely(!JS_IsException(v))) {
+        return FALSE;
     }
 
-    return 0;
+    except = JS_GetException(ctx);
+    name = getPropAsString(ctx, except, "name");
+    if (!name) {
+        JS_FreeValue(ctx, except);
+        return TRUE;
+    }
+
+    stack = getPropAsString(ctx, except, "stack");
+    if (!stack) {
+        JS_FreeCString(ctx, name);
+        JS_FreeValue(ctx, except);
+        return TRUE;
+    }
+
+    message = getPropAsString(ctx, except, "message");
+    if (!message) {
+        JS_FreeCString(ctx, name);
+        JS_FreeCString(ctx, stack);
+        JS_FreeValue(ctx, except);
+        return TRUE;
+    }
+
+    JS_FreeValue(ctx, except);
+
+    printError(name, message, stack, alertOnError);
+    JS_FreeCString(ctx, name);
+    JS_FreeCString(ctx, stack);
+    JS_FreeCString(ctx, message);
+
+    return TRUE;
 }
 
 void evalInSandbox(const char* str, int alertOnError) {
     JSValue result;
 
-    if (!runtime) {
+    if (unlikely(!runtime)) {
         runtime = JS_NewRuntime();
         ctx = JS_NewContext(runtime);
     }
 
     result = JS_Eval(ctx, str, strlen(str), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
-    buildAndPrintError(result, alertOnError);
-    JS_FreeValue(ctx, result);
-}
-
-void initSandbox(const char* init, const char* cleanup, int alertOnError) {
-    JSValue result;
-
-    if (!runtime) {
-        runtime = JS_NewRuntime();
-        ctx = JS_NewContext(runtime);
-    }
-
-    result = JS_Eval(ctx, init, strlen(init), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
-    if (!buildAndPrintError(result, alertOnError)) {
-        dispatchFunction = result;
-    }
-    result = JS_Eval(ctx, cleanup, strlen(cleanup), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
-    buildAndPrintError(result, alertOnError);
-    JS_FreeValue(ctx, result);
-}
-
-void dispatchEvent(const char* str, int alertOnError) {
-    JSValue result;
-
-    if (!dispatchFunction) {
-        return;
-    }
-
-    result = JS_ParseJSON(ctx, str, strlen(str), "<event>");
-    if (buildAndPrintError(result, alertOnError)) {
-        JS_FreeValue(ctx, result);
-        return;
-    }
-
-    result = JS_Call(ctx, dispatchFunction, JS_UNDEFINED, 1, &result);
     buildAndPrintError(result, alertOnError);
     JS_FreeValue(ctx, result);
 }
@@ -140,6 +104,55 @@ void nukeSandbox() {
     ctx = NULL;
     JS_FreeRuntime(runtime);
     runtime = NULL;
+}
+
+BOOL initSandbox(const char* init, const char* cleanup, int alertOnError) {
+    JSValue result;
+
+    if (unlikely(runtime)) {
+        nukeSandbox();
+    }
+
+    runtime = JS_NewRuntime();
+    ctx = JS_NewContext(runtime);
+
+    result = JS_Eval(ctx, init, strlen(init), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    if (buildAndPrintError(result, alertOnError)) {
+        JS_FreeValue(ctx, result);
+        return FALSE;
+    }
+
+    dispatchFunction = result;
+
+    result = JS_Eval(ctx, cleanup, strlen(cleanup), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    if (buildAndPrintError(result, alertOnError)) {
+        JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, dispatchFunction);
+        return FALSE;
+    }
+
+    JS_FreeValue(ctx, result);
+    return TRUE;
+}
+
+void dispatchEvent(const char* str, int alertOnError) {
+    JSValue result, arg;
+
+    if (!dispatchFunction) {
+        return;
+    }
+
+    result = JS_ParseJSON(ctx, str, strlen(str), "<event>");
+    if (buildAndPrintError(result, alertOnError)) {
+        JS_FreeValue(ctx, result);
+        return;
+    }
+
+    arg = result;
+    result = JS_Call(ctx, dispatchFunction, JS_UNDEFINED, 1, (JSValueConst *)&arg);
+    JS_FreeValue(ctx, arg);
+    buildAndPrintError(result, alertOnError);
+    JS_FreeValue(ctx, result);
 }
 
 extern void logMemUse(const char*);
