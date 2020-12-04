@@ -35,6 +35,7 @@ static JSValue js_debugMe(JSContext *ctx, JSValueConst this_val,
 
     json = JS_JSONStringify(ctx, argv[0], JS_UNDEFINED, JS_UNDEFINED);
     if (JS_IsException(json)) {
+        JS_FreeValue(ctx, json);
         return JS_EXCEPTION;
     }
     str = JS_ToCString(ctx, json);
@@ -44,7 +45,7 @@ static JSValue js_debugMe(JSContext *ctx, JSValueConst this_val,
     }
 
     if (argc == 2) {
-        alert = JS_ToBoolFree(ctx, argv[1]);
+        alert = JS_ToBool(ctx, argv[1]);
     }
 
     debugMe(str, alert);
@@ -65,6 +66,7 @@ static JSValue js_send(JSContext *ctx, JSValueConst this_val,
     const char *str;
     JSValue json = JS_JSONStringify(ctx, argv[0], JS_UNDEFINED, JS_UNDEFINED);
     if (JS_IsException(json)) {
+        JS_FreeValue(ctx, json);
         return JS_EXCEPTION;
     }
     str = JS_ToCString(ctx, json);

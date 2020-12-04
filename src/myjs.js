@@ -35,14 +35,14 @@ mergeInto(LibraryManager.library, {
     try {
       const url = new window.URL(UTF8ToString(ptr));
       result = window.JSON.stringify({
-        "cScheme": url.protocol,
+        "cScheme": url.protocol.replace(/:$/, ""),
         "cUser": url.username,
         "cPassword": url.password,
         "cHost": url.hostname,
         "cPort": url.port,
         "cPath": url.pathname,
-        "cParameters": url.search,
-        "cFragments": url.frag,
+        "cParameters": url.search.replace(/^\?/, ""),
+        "cFragments": url.hash.replace(/^#/, ""),
       });
     } catch (error) {
       result = error.message;
