@@ -32,6 +32,22 @@ mergeInto(LibraryManager.library, {
       window.dispatchEvent(event);
     } catch (_) {}
   },
+  $timeout__postset: "timeout();",
+  $timeout: function () {
+    const extra = window["sandboxExtra"];
+    _setTimeout = (s, n) => extra.setTimeout(UTF8ToString(s), n);
+    _clearTimeout = (s, n) => extra.clearTimeout(UTF8ToString(s), n);
+    _setInterval = (s, n) => extra.setInterval(UTF8ToString(s), n);
+    _clearInterval = (s, n) => extra.clearInterval(UTF8ToString(s), n);
+  },
+  setTimeout: function () {},
+  setTimeout__deps: ["$timeout"],
+  clearTimeout: function () {},
+  clearTimeout__deps: ["$timeout"],
+  setInterval: function () {},
+  setInterval__deps: ["$timeout"],
+  clearInterval: function () {},
+  clearInterval__deps: ["$timeout"],
   parseURL: function (ptr) {
     let result;
     try {
