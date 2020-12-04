@@ -79,9 +79,9 @@ static JSValue js_send(JSContext *ctx, JSValueConst this_val,
     return JS_UNDEFINED;
 }
 
-#define CRACKURL JS_CFUNC_DEF("crackURL", 1, js_crackURL),
-extern char* crackURL(const char*);
-static JSValue js_crackURL(JSContext *ctx, JSValueConst this_val,
+#define PARSEURL JS_CFUNC_DEF("parseURL", 1, js_parseURL),
+extern char* parseURL(const char*);
+static JSValue js_parseURL(JSContext *ctx, JSValueConst this_val,
                            int argc, JSValueConst *argv)
 {
     const char *str;
@@ -98,7 +98,7 @@ static JSValue js_crackURL(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     }
 
-    result = crackURL(str);
+    result = parseURL(str);
     JS_FreeCString(ctx, str);
     resultLen = strlen(result);
 
@@ -116,4 +116,4 @@ static JSValue js_crackURL(JSContext *ctx, JSValueConst this_val,
     return obj;
 }
 
-#define EXTRA SEND CRACKURL DEBUGME
+#define EXTRA SEND PARSEURL DEBUGME

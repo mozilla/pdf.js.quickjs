@@ -19,38 +19,46 @@
  */
 
 mergeInto(LibraryManager.library, {
-  sendToWindow: function(ptr) {
+  sendToWindow: function (ptr) {
     const string = UTF8ToString(ptr);
     try {
       const data = window.JSON.parse(string);
       if (data === undefined || data === null) {
         return;
       }
-      const event = new window.CustomEvent("updateFromSandbox", { detail: data });
+      const event = new window.CustomEvent("updateFromSandbox", {
+        detail: data,
+      });
       window.dispatchEvent(event);
     } catch (_) {}
   },
-  crackURL: function(ptr) {
+  parseURL: function (ptr) {
     let result;
     try {
       const url = new window.URL(UTF8ToString(ptr));
-      result = window.JSON.stringify({
-        "cScheme": url.protocol.replace(/:$/, ""),
-        "cUser": url.username,
-        "cPassword": url.password,
-        "cHost": url.hostname,
-        "cPort": url.port,
-        "cPath": url.pathname,
-        "cParameters": url.search.replace(/^\?/, ""),
-        "cFragments": url.hash.replace(/^#/, ""),
-      });
+      const props = [
+        "hash",
+        "host",
+        "hostname",
+        "href",
+        "origin",
+        "password",
+        "pathname",
+        "port",
+        "protocol",
+        "search",
+        "searchParams",
+        "username",
+      ];
+      const obj = Object.fromEntries(props.map((name) => [name, url[name]]));
+      result = window.JSON.stringify(obj);
     } catch (error) {
       result = error.message;
     }
     return stringToNewUTF8(result);
   },
-  crackURL__deps: ["$stringToNewUTF8"],
-  debugMe: function(ptr, alert) {
+  parseURL__deps: ["$stringToNewUTF8"],
+  debugMe: function (ptr, alert) {
     const string = UTF8ToString(ptr);
     let data;
     try {
@@ -64,7 +72,7 @@ mergeInto(LibraryManager.library, {
       window.console.log("DEBUGME", data);
     }
   },
-  printError: function(name_ptr, message_ptr, stack_ptr, alertOnError) {
+  printError: function (name_ptr, message_ptr, stack_ptr, alertOnError) {
     const name = UTF8ToString(name_ptr);
     const message = UTF8ToString(message_ptr);
     const stack = UTF8ToString(stack_ptr);
@@ -75,8 +83,8 @@ mergeInto(LibraryManager.library, {
       window.console.error(error);
     }
   },
-  logMemUse: function(ptr) {
+  logMemUse: function (ptr) {
     const string = UTF8ToString(ptr);
     window.console.log(string);
-  }
+  },
 });
