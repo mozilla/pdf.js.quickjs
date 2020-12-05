@@ -39,6 +39,7 @@ mergeInto(LibraryManager.library, {
     _clearTimeout = (s, n) => extra.clearTimeout(UTF8ToString(s), n);
     _setInterval = (s, n) => extra.setInterval(UTF8ToString(s), n);
     _clearInterval = (s, n) => extra.clearInterval(UTF8ToString(s), n);
+    delete window["sandboxExtra"];
   },
   setTimeout: function () {},
   setTimeout__deps: ["$timeout"],
