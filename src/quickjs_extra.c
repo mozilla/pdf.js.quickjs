@@ -272,4 +272,26 @@ static JSValue js_prompt(JSContext *ctx, JSValueConst this_val,
     return val;
 }
 
-#define EXTRA SEND SETTIMEOUT CLEARTIMEOUT SETINTERVAL CLEARINTERVAL PARSEURL ALERT PROMPT DEBUGME
+#define GLOBALEVAL JS_CFUNC_DEF("globalEval", 1, js_globalEval),
+static JSValue js_globalEval(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv)
+{
+    const char *str;
+    JSValue result;
+
+    if (argc != 1) {
+        return JS_EXCEPTION;
+    }
+
+    str = JS_ToCString(ctx, argv[0]);
+    if (!str) {
+        return JS_EXCEPTION;
+    }
+
+    result = JS_Eval(ctx, str, strlen(str), "<eval>", JS_EVAL_TYPE_GLOBAL);
+    JS_FreeCString(ctx, str);
+
+    return result;
+}
+
+#define EXTRA SEND SETTIMEOUT CLEARTIMEOUT SETINTERVAL CLEARINTERVAL PARSEURL ALERT PROMPT DEBUGME GLOBALEVAL
