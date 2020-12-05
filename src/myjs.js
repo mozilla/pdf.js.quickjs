@@ -32,23 +32,30 @@ mergeInto(LibraryManager.library, {
       window.dispatchEvent(event);
     } catch (_) {}
   },
-  $timeout__postset: "timeout();",
-  $timeout: function () {
+  $extra__postset: "extra();",
+  $extra: function () {
     const extra = window["sandboxExtra"];
     _setTimeout = (s, n) => extra.setTimeout(UTF8ToString(s), n);
     _clearTimeout = (s, n) => extra.clearTimeout(UTF8ToString(s), n);
     _setInterval = (s, n) => extra.setInterval(UTF8ToString(s), n);
     _clearInterval = (s, n) => extra.clearInterval(UTF8ToString(s), n);
+    _alert = (s) => extra.alert(UTF8ToString(s));
+    _prompt = (q, d) =>
+      stringToNewUTF8(extra.prompt(UTF8ToString(q), UTF8ToString(d)));
     delete window["sandboxExtra"];
   },
   setTimeout: function () {},
-  setTimeout__deps: ["$timeout"],
+  setTimeout__deps: ["$extra"],
   clearTimeout: function () {},
-  clearTimeout__deps: ["$timeout"],
+  clearTimeout__deps: ["$extra"],
   setInterval: function () {},
-  setInterval__deps: ["$timeout"],
+  setInterval__deps: ["$extra"],
   clearInterval: function () {},
-  clearInterval__deps: ["$timeout"],
+  clearInterval__deps: ["$extra"],
+  alert: function () {},
+  alert__deps: ["$extra"],
+  prompt: function () {},
+  prompt__deps: ["$extra"],
   parseURL: function (ptr) {
     let result;
     try {

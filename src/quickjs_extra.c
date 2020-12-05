@@ -209,4 +209,67 @@ static JSValue js_parseURL(JSContext *ctx, JSValueConst this_val,
     return obj;
 }
 
-#define EXTRA SEND SETTIMEOUT CLEARTIMEOUT SETINTERVAL CLEARINTERVAL PARSEURL DEBUGME
+#define ALERT JS_CFUNC_DEF("alert", 1, js_alert),
+extern void alert(const char*);
+static JSValue js_alert(JSContext *ctx, JSValueConst this_val,
+                        int argc, JSValueConst *argv)
+{
+    const char *str;
+
+    if (argc != 1) {
+        return JS_EXCEPTION;
+    }
+
+    str = JS_ToCString(ctx, argv[0]);
+    if (!str) {
+        return JS_EXCEPTION;
+    }
+
+    alert(str);
+
+    JS_FreeCString(ctx, str);
+
+    return JS_UNDEFINED;
+}
+
+#define PROMPT JS_CFUNC_DEF("prompt", 2, js_prompt),
+extern const char* prompt(const char*, const char*);
+static JSValue js_prompt(JSContext *ctx, JSValueConst this_val,
+                         int argc, JSValueConst *argv)
+{
+    const char *quest, *def, *res;
+    JSValue val;
+
+    if (argc < 1 || argc > 2) {
+        return JS_EXCEPTION;
+    }
+
+    quest = JS_ToCString(ctx, argv[0]);
+    if (!quest) {
+        return JS_EXCEPTION;
+    }
+
+    if (argc == 2) {
+        def = JS_ToCString(ctx, argv[1]);
+        if (!def) {
+            JS_FreeCString(ctx, quest);
+            return JS_EXCEPTION;
+        }
+        res = prompt(quest, def);
+        JS_FreeCString(ctx, def);
+    } else {
+        res = prompt(quest, "");
+    }
+
+    JS_FreeCString(ctx, quest);
+    val = JS_NewStringLen(ctx, res, strlen(res));
+
+#ifdef free
+#undef free
+#endif
+    free((void*)res);
+
+    return val;
+}
+
+#define EXTRA SEND SETTIMEOUT CLEARTIMEOUT SETINTERVAL CLEARINTERVAL PARSEURL ALERT PROMPT DEBUGME
