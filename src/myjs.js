@@ -42,6 +42,15 @@ mergeInto(LibraryManager.library, {
     _alert = (s) => extra.alert(UTF8ToString(s));
     _prompt = (q, d) =>
       stringToNewUTF8(extra.prompt(UTF8ToString(q), UTF8ToString(d)));
+    _parseURL = (s) => {
+      let res;
+      try {
+        res = extra["parseURL"](UTF8ToString(s));
+      } catch (error) {
+        res = error;
+      }
+      return stringToNewUTF8(res);
+    };
     delete window["sandboxExtra"];
   },
   setTimeout: function () {},
@@ -55,33 +64,9 @@ mergeInto(LibraryManager.library, {
   alert: function () {},
   alert__deps: ["$extra"],
   prompt: function () {},
-  prompt__deps: ["$extra"],
-  parseURL: function (ptr) {
-    let result;
-    try {
-      const url = new window.URL(UTF8ToString(ptr));
-      const props = [
-        "hash",
-        "host",
-        "hostname",
-        "href",
-        "origin",
-        "password",
-        "pathname",
-        "port",
-        "protocol",
-        "search",
-        "searchParams",
-        "username",
-      ];
-      const obj = Object.fromEntries(props.map((name) => [name, url[name]]));
-      result = window.JSON.stringify(obj);
-    } catch (error) {
-      result = error.message;
-    }
-    return stringToNewUTF8(result);
-  },
-  parseURL__deps: ["$stringToNewUTF8"],
+  prompt__deps: ["$extra", "$stringToNewUTF8"],
+  parseURL: function () {},
+  parseURL__deps: ["$extra", "$stringToNewUTF8"],
   debugMe: function (ptr, alert) {
     const string = UTF8ToString(ptr);
     let data;
