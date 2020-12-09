@@ -196,15 +196,15 @@ static JSValue js_parseURL(JSContext *ctx, JSValueConst this_val,
     resultLen = strlen(result);
 
     obj = JS_ParseJSON(ctx, result, resultLen, "<input>");
-    if (JS_IsException(obj)) {
-        JS_FreeValue(ctx, obj);
-        obj = JS_ThrowTypeError(ctx, "%s", result);
-    }
-
 #ifdef free
 #undef free
 #endif
     free((void*)result);
+
+    if (JS_IsException(obj)) {
+        JS_FreeValue(ctx, obj);
+        return JS_EXCEPTION;
+    }
 
     return obj;
 }

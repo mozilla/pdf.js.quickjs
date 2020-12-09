@@ -27,7 +27,7 @@
 
 static JSRuntime* runtime = NULL;
 static JSContext* ctx = NULL;
-static JSValue dispatchFunction = 0;
+static JSValue commFunction = 0;
 
 static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name) {
     JSAtom prop = JS_NewAtom(ctx, name);
@@ -97,8 +97,8 @@ void nukeSandbox() {
     if (!runtime) {
         return;
     }
-    if (dispatchFunction) {
-        JS_FreeValue(ctx, dispatchFunction);
+    if (commFunction) {
+        JS_FreeValue(ctx, commFunction);
     }
     JS_FreeContext(ctx);
     ctx = NULL;
@@ -122,12 +122,12 @@ BOOL initSandbox(const char* init, const char* cleanup, int alertOnError) {
         return FALSE;
     }
 
-    dispatchFunction = result;
+    commFunction = result;
 
     result = JS_Eval(ctx, cleanup, strlen(cleanup), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
     if (buildAndPrintError(result, alertOnError)) {
         JS_FreeValue(ctx, result);
-        JS_FreeValue(ctx, dispatchFunction);
+        JS_FreeValue(ctx, commFunction);
         return FALSE;
     }
 
@@ -135,22 +135,27 @@ BOOL initSandbox(const char* init, const char* cleanup, int alertOnError) {
     return TRUE;
 }
 
-void dispatchEvent(const char* str, int alertOnError) {
-    JSValue result, arg;
+void commFun(const char* name, const char* str, int alertOnError) {
+    JSValue funName, result, arg;
 
-    if (!dispatchFunction) {
+    if (!commFunction) {
         return;
     }
 
-    result = JS_ParseJSON(ctx, str, strlen(str), "<event>");
+    funName = JS_NewStringLen(ctx, name, strlen(name));
+
+    result = JS_ParseJSON(ctx, str, strlen(str), "<commFun>");
     if (buildAndPrintError(result, alertOnError)) {
         JS_FreeValue(ctx, result);
+        JS_FreeValue(ctx, funName);
         return;
     }
 
-    arg = result;
-    result = JS_Call(ctx, dispatchFunction, JS_UNDEFINED, 1, (JSValueConst *)&arg);
-    JS_FreeValue(ctx, arg);
+    JSValueConst args[2] = { funName, result };
+    result = JS_Call(ctx, commFunction, JS_UNDEFINED, 2, args);
+    JS_FreeValue(ctx, args[0]);
+    JS_FreeValue(ctx, args[1]);
+
     buildAndPrintError(result, alertOnError);
     JS_FreeValue(ctx, result);
 }

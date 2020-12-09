@@ -35,22 +35,14 @@ mergeInto(LibraryManager.library, {
   $extra__postset: "extra();",
   $extra: function () {
     const extra = window["sandboxExtra"];
-    _setTimeout = (s, n) => extra.setTimeout(UTF8ToString(s), n);
-    _clearTimeout = (s, n) => extra.clearTimeout(UTF8ToString(s), n);
-    _setInterval = (s, n) => extra.setInterval(UTF8ToString(s), n);
-    _clearInterval = (s, n) => extra.clearInterval(UTF8ToString(s), n);
-    _alert = (s) => extra.alert(UTF8ToString(s));
+    _setTimeout = (s, n) => extra["setTimeout"](UTF8ToString(s), n);
+    _clearTimeout = (s, n) => extra["clearTimeout"](UTF8ToString(s), n);
+    _setInterval = (s, n) => extra["setInterval"](UTF8ToString(s), n);
+    _clearInterval = (s, n) => extra["clearInterval"](UTF8ToString(s), n);
+    _alert = (s) => extra["alert"](UTF8ToString(s));
     _prompt = (q, d) =>
-      stringToNewUTF8(extra.prompt(UTF8ToString(q), UTF8ToString(d)));
-    _parseURL = (s) => {
-      let res;
-      try {
-        res = extra["parseURL"](UTF8ToString(s));
-      } catch (error) {
-        res = error;
-      }
-      return stringToNewUTF8(res);
-    };
+      stringToNewUTF8(extra["prompt"](UTF8ToString(q), UTF8ToString(d)));
+    _parseURL = (s) => stringToNewUTF8(extra["parseURL"](UTF8ToString(s)));
     delete window["sandboxExtra"];
   },
   setTimeout: function () {},
