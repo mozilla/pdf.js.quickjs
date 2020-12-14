@@ -80,11 +80,11 @@ static JSValue js_send(JSContext *ctx, JSValueConst this_val,
 }
 
 #define SETTIMEOUT JS_CFUNC_DEF("setTimeout", 2, js_setTimeout),
-extern int setTimeout(const char*, double);
+extern void setTimeout(int32_t, double);
 static JSValue js_setTimeout(JSContext *ctx, JSValueConst this_val,
                              int argc, JSValueConst *argv)
 {
-    const char *str;
+    int32_t callbackId;
     double millisecs = 0.;
     int id;
 
@@ -96,23 +96,21 @@ static JSValue js_setTimeout(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     }
 
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str) {
+    if (JS_ToInt32(ctx, &callbackId, argv[0])) {
         return JS_EXCEPTION;
     }
 
-    id = setTimeout(str, millisecs);
-    JS_FreeCString(ctx, str);
+    setTimeout(callbackId, millisecs);
 
-    return JS_NewInt32(ctx, id);
+    return JS_UNDEFINED;
 }
 
 #define CLEARTIMEOUT JS_CFUNC_DEF("clearTimeout", 1, js_clearTimeout),
-extern void clearTimeout(int);
+extern void clearTimeout(int32_t);
 static JSValue js_clearTimeout(JSContext *ctx, JSValueConst this_val,
                                int argc, JSValueConst *argv)
 {
-    int id;
+    int32_t id;
 
     if (argc != 1) {
         return JS_EXCEPTION;
@@ -127,11 +125,11 @@ static JSValue js_clearTimeout(JSContext *ctx, JSValueConst this_val,
 }
 
 #define SETINTERVAL JS_CFUNC_DEF("setInterval", 2, js_setInterval),
-extern int setInterval(const char*, double);
+extern void setInterval(int32_t, double);
 static JSValue js_setInterval(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)
 {
-    const char *str;
+    int32_t callbackId;
     double millisecs = 0.;
     int id;
 
@@ -143,22 +141,21 @@ static JSValue js_setInterval(JSContext *ctx, JSValueConst this_val,
         return JS_EXCEPTION;
     }
 
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str) {
+    if (JS_ToInt32(ctx, &callbackId, argv[0])) {
         return JS_EXCEPTION;
     }
-    id = setInterval(str, millisecs);
-    JS_FreeCString(ctx, str);
 
-    return JS_NewInt32(ctx, id);
+    setInterval(callbackId, millisecs);
+
+    return JS_UNDEFINED;
 }
 
 #define CLEARINTERVAL JS_CFUNC_DEF("clearInterval", 1, js_clearInterval),
-extern void clearInterval(int);
+extern void clearInterval(int32_t);
 static JSValue js_clearInterval(JSContext *ctx, JSValueConst this_val,
                                 int argc, JSValueConst *argv)
 {
-    int id;
+    int32_t id;
 
     if (argc != 1) {
         return JS_EXCEPTION;
@@ -171,6 +168,16 @@ static JSValue js_clearInterval(JSContext *ctx, JSValueConst this_val,
 
     return JS_UNDEFINED;
 }
+
+#define CLEANTIMEOUTS JS_CFUNC_DEF("cleanTimeouts", 0, js_cleanTimeouts),
+extern void cleanTimeouts();
+static JSValue js_cleanTimeouts(JSContext *ctx, JSValueConst this_val,
+                                int argc, JSValueConst *argv)
+{
+    cleanTimeouts();
+    return JS_UNDEFINED;
+}
+
 
 #define PARSEURL JS_CFUNC_DEF("parseURL", 1, js_parseURL),
 extern char* parseURL(const char*);
@@ -262,36 +269,18 @@ static JSValue js_prompt(JSContext *ctx, JSValueConst this_val,
     }
 
     JS_FreeCString(ctx, quest);
-    val = JS_NewStringLen(ctx, res, strlen(res));
+    if (res) {
+        val = JS_NewStringLen(ctx, res, strlen(res));
 
 #ifdef free
 #undef free
 #endif
-    free((void*)res);
+        free((void*)res);
+    } else {
+        val = JS_NULL;
+    }
 
     return val;
 }
 
-#define GLOBALEVAL JS_CFUNC_DEF("globalEval", 1, js_globalEval),
-static JSValue js_globalEval(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
-{
-    const char *str;
-    JSValue result;
-
-    if (argc != 1) {
-        return JS_EXCEPTION;
-    }
-
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str) {
-        return JS_EXCEPTION;
-    }
-
-    result = JS_Eval(ctx, str, strlen(str), "<eval>", JS_EVAL_TYPE_GLOBAL);
-    JS_FreeCString(ctx, str);
-
-    return result;
-}
-
-#define EXTRA SEND SETTIMEOUT CLEARTIMEOUT SETINTERVAL CLEARINTERVAL PARSEURL ALERT PROMPT DEBUGME GLOBALEVAL
+#define EXTRA SEND SETTIMEOUT CLEARTIMEOUT SETINTERVAL CLEARINTERVAL CLEANTIMEOUTS PARSEURL ALERT PROMPT DEBUGME

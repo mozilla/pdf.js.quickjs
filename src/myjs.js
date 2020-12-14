@@ -19,46 +19,43 @@
  */
 
 mergeInto(LibraryManager.library, {
-  sendToWindow: function (ptr) {
-    const string = UTF8ToString(ptr);
-    try {
-      const data = window.JSON.parse(string);
-      if (data === undefined || data === null) {
-        return;
+  $externals__postset: "externals();",
+  $externals: function () {
+    const externals = window["sandboxExternals"];
+    _setTimeout = (id, n) => externals["setTimeout"](id, n);
+    _clearTimeout = (id) => externals["clearTimeout"](id);
+    _setInterval = (id, n) => externals["setInterval"](id, n);
+    _clearInterval = (id) => externals["clearInterval"](id);
+    _cleanTimeouts = () => externals["cleanTimeouts"]();
+    _alert = (s) => externals["alert"](UTF8ToString(s));
+    _prompt = (q, d) => {
+      const response = externals["prompt"](UTF8ToString(q), UTF8ToString(d));
+      if (response !== null) {
+        return stringToNewUTF8(response);
       }
-      const event = new window.CustomEvent("updateFromSandbox", {
-        detail: data,
-      });
-      window.dispatchEvent(event);
-    } catch (_) {}
-  },
-  $extra__postset: "extra();",
-  $extra: function () {
-    const extra = window["sandboxExtra"];
-    _setTimeout = (s, n) => extra["setTimeout"](UTF8ToString(s), n);
-    _clearTimeout = (s, n) => extra["clearTimeout"](UTF8ToString(s), n);
-    _setInterval = (s, n) => extra["setInterval"](UTF8ToString(s), n);
-    _clearInterval = (s, n) => extra["clearInterval"](UTF8ToString(s), n);
-    _alert = (s) => extra["alert"](UTF8ToString(s));
-    _prompt = (q, d) =>
-      stringToNewUTF8(extra["prompt"](UTF8ToString(q), UTF8ToString(d)));
-    _parseURL = (s) => stringToNewUTF8(extra["parseURL"](UTF8ToString(s)));
-    delete window["sandboxExtra"];
+      return null;
+    }
+    _parseURL = (s) => stringToNewUTF8(externals["parseURL"](UTF8ToString(s)));
+    _sendToWindow = (s) => externals["send"](UTF8ToString(s));
   },
   setTimeout: function () {},
-  setTimeout__deps: ["$extra"],
+  setTimeout__deps: ["$externals"],
   clearTimeout: function () {},
-  clearTimeout__deps: ["$extra"],
+  clearTimeout__deps: ["$externals"],
   setInterval: function () {},
-  setInterval__deps: ["$extra"],
+  setInterval__deps: ["$externals"],
   clearInterval: function () {},
-  clearInterval__deps: ["$extra"],
+  clearInterval__deps: ["$externals"],
+  cleanTimeouts: function () {},
+  cleanTimeouts__deps: ["$externals"],
   alert: function () {},
-  alert__deps: ["$extra"],
+  alert__deps: ["$externals"],
   prompt: function () {},
-  prompt__deps: ["$extra", "$stringToNewUTF8"],
+  prompt__deps: ["$externals", "$stringToNewUTF8"],
   parseURL: function () {},
-  parseURL__deps: ["$extra", "$stringToNewUTF8"],
+  parseURL__deps: ["$externals", "$stringToNewUTF8"],
+  sendToWindow: function () {},
+  sendToWindow__deps: ["$externals", "$stringToNewUTF8"],
   debugMe: function (ptr, alert) {
     const string = UTF8ToString(ptr);
     let data;

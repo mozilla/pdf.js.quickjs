@@ -28,6 +28,7 @@
 static JSRuntime* runtime = NULL;
 static JSContext* ctx = NULL;
 static JSValue commFunction = 0;
+static int globalAlertOnError = 0;
 
 static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name) {
     JSAtom prop = JS_NewAtom(ctx, name);
@@ -106,7 +107,7 @@ void nukeSandbox() {
     runtime = NULL;
 }
 
-BOOL initSandbox(const char* init, const char* cleanup, int alertOnError) {
+BOOL initSandbox(const char* init, int alertOnError) {
     JSValue result;
 
     if (unlikely(runtime)) {
@@ -115,6 +116,7 @@ BOOL initSandbox(const char* init, const char* cleanup, int alertOnError) {
 
     runtime = JS_NewRuntime();
     ctx = JS_NewContext(runtime);
+    globalAlertOnError = alertOnError;
 
     result = JS_Eval(ctx, init, strlen(init), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
     if (buildAndPrintError(result, alertOnError)) {
@@ -124,18 +126,10 @@ BOOL initSandbox(const char* init, const char* cleanup, int alertOnError) {
 
     commFunction = result;
 
-    result = JS_Eval(ctx, cleanup, strlen(cleanup), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
-    if (buildAndPrintError(result, alertOnError)) {
-        JS_FreeValue(ctx, result);
-        JS_FreeValue(ctx, commFunction);
-        return FALSE;
-    }
-
-    JS_FreeValue(ctx, result);
     return TRUE;
 }
 
-void commFun(const char* name, const char* str, int alertOnError) {
+void commFun(const char* name, const char* str) {
     JSValue funName, result, arg;
 
     if (!commFunction) {
@@ -145,7 +139,7 @@ void commFun(const char* name, const char* str, int alertOnError) {
     funName = JS_NewStringLen(ctx, name, strlen(name));
 
     result = JS_ParseJSON(ctx, str, strlen(str), "<commFun>");
-    if (buildAndPrintError(result, alertOnError)) {
+    if (buildAndPrintError(result, globalAlertOnError)) {
         JS_FreeValue(ctx, result);
         JS_FreeValue(ctx, funName);
         return;
@@ -156,7 +150,7 @@ void commFun(const char* name, const char* str, int alertOnError) {
     JS_FreeValue(ctx, args[0]);
     JS_FreeValue(ctx, args[1]);
 
-    buildAndPrintError(result, alertOnError);
+    buildAndPrintError(result, globalAlertOnError);
     JS_FreeValue(ctx, result);
 }
 
