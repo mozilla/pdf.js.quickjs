@@ -23,7 +23,7 @@ mergeInto(LibraryManager.library, {
   $externals: function () {
     _callExternalFunction = (name, args) => {
       name = UTF8ToString(name);
-      args = args !== null ? UTF8ToString(args) : null;
+      args = args !== null ? JSON.parse(UTF8ToString(args)) : [];
       const result = Module["externalCall"](name, args);
       if (!result) {
         return null;
