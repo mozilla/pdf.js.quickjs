@@ -18,25 +18,22 @@
  * THE SOFTWARE.
  */
 
-#define DEBUG_ME 1
-#if DEBUG_ME != 0
-#define DEBUGME JS_CFUNC_DEF("debugMe", 2, js_debugMe ),
-extern void debugMe(const char*, const int);
-static JSValue js_debugMe(JSContext *ctx, JSValueConst this_val,
-                          int argc, JSValueConst *argv)
+#define DUMP JS_CFUNC_DEF("dump", 2, js_dump ),
+extern void dump(const char*, const int);
+static JSValue js_dump(JSContext *ctx, JSValueConst this_val,
+                       int argc, JSValueConst *argv)
 {
     const char *str;
     int alert = 0;
     JSValue json;
 
     if (argc < 1 || argc > 2) {
-        return JS_EXCEPTION;
+        return JS_UNDEFINED;
     }
 
     json = JS_JSONStringify(ctx, argv[0], JS_UNDEFINED, JS_UNDEFINED);
     if (JS_IsException(json)) {
-        JS_FreeValue(ctx, json);
-        return JS_EXCEPTION;
+        return json;
     }
     str = JS_ToCString(ctx, json);
     JS_FreeValue(ctx, json);
@@ -48,239 +45,59 @@ static JSValue js_debugMe(JSContext *ctx, JSValueConst this_val,
         alert = JS_ToBool(ctx, argv[1]);
     }
 
-    debugMe(str, alert);
+    dump(str, alert);
 
     JS_FreeCString(ctx, str);
 
     return JS_UNDEFINED;
 }
-#else
-#define DEBUGME
-#endif
 
-#define SEND JS_CFUNC_DEF("send", 1, js_send),
-extern void sendToWindow(const char*);
-static JSValue js_send(JSContext *ctx, JSValueConst this_val,
-                       int argc, JSValueConst *argv)
+#define CALLEXTERNALFUNCTION JS_CFUNC_DEF("callExternalFunction", 2, js_callExternalFunction),
+extern const char* callExternalFunction(const char*, const char*);
+static JSValue js_callExternalFunction(JSContext *ctx, JSValueConst this_val,
+                                       int argc, JSValueConst *argv)
 {
-    const char *str;
-    JSValue json = JS_JSONStringify(ctx, argv[0], JS_UNDEFINED, JS_UNDEFINED);
-    if (JS_IsException(json)) {
+    const char *name, *str = NULL, *result;
+    JSValue json, obj;
+
+    if (argc < 1 || argc > 2) {
+        return JS_UNDEFINED;
+    }
+
+    name = JS_ToCString(ctx, argv[0]);
+    if (!name) {
+        return JS_EXCEPTION;
+    }
+
+    if (argc == 2) {
+        json = JS_JSONStringify(ctx, argv[1], JS_UNDEFINED, JS_UNDEFINED);
+        if (JS_IsException(json)) {
+            JS_FreeCString(ctx, name);
+            return json;
+        }
+        str = JS_ToCString(ctx, json);
         JS_FreeValue(ctx, json);
-        return JS_EXCEPTION;
+        if (!str) {
+            JS_FreeCString(ctx, name);
+            return JS_EXCEPTION;
+        }
     }
-    str = JS_ToCString(ctx, json);
-    JS_FreeValue(ctx, json);
 
-    sendToWindow(str);
-
+    result = callExternalFunction(name, str);
+    JS_FreeCString(ctx, name);
     JS_FreeCString(ctx, str);
 
-    return JS_UNDEFINED;
-}
-
-#define SETTIMEOUT JS_CFUNC_DEF("setTimeout", 2, js_setTimeout),
-extern void setTimeout(int32_t, double);
-static JSValue js_setTimeout(JSContext *ctx, JSValueConst this_val,
-                             int argc, JSValueConst *argv)
-{
-    int32_t callbackId;
-    double millisecs = 0.;
-    int id;
-
-    if (argc < 1 || argc > 2) {
-        return JS_EXCEPTION;
+    if (!result) {
+        return JS_UNDEFINED;
     }
 
-    if (argc == 2 && JS_ToFloat64(ctx, &millisecs, argv[1])) {
-        return JS_EXCEPTION;
-    }
-
-    if (JS_ToInt32(ctx, &callbackId, argv[0])) {
-        return JS_EXCEPTION;
-    }
-
-    setTimeout(callbackId, millisecs);
-
-    return JS_UNDEFINED;
-}
-
-#define CLEARTIMEOUT JS_CFUNC_DEF("clearTimeout", 1, js_clearTimeout),
-extern void clearTimeout(int32_t);
-static JSValue js_clearTimeout(JSContext *ctx, JSValueConst this_val,
-                               int argc, JSValueConst *argv)
-{
-    int32_t id;
-
-    if (argc != 1) {
-        return JS_EXCEPTION;
-    }
-
-    if (JS_ToInt32(ctx, &id, argv[0])) {
-        return JS_EXCEPTION;
-    }
-    clearTimeout(id);
-
-    return JS_UNDEFINED;
-}
-
-#define SETINTERVAL JS_CFUNC_DEF("setInterval", 2, js_setInterval),
-extern void setInterval(int32_t, double);
-static JSValue js_setInterval(JSContext *ctx, JSValueConst this_val,
-                              int argc, JSValueConst *argv)
-{
-    int32_t callbackId;
-    double millisecs = 0.;
-    int id;
-
-    if (argc < 1 || argc > 2) {
-        return JS_EXCEPTION;
-    }
-
-    if (argc == 2 && JS_ToFloat64(ctx, &millisecs, argv[1])) {
-        return JS_EXCEPTION;
-    }
-
-    if (JS_ToInt32(ctx, &callbackId, argv[0])) {
-        return JS_EXCEPTION;
-    }
-
-    setInterval(callbackId, millisecs);
-
-    return JS_UNDEFINED;
-}
-
-#define CLEARINTERVAL JS_CFUNC_DEF("clearInterval", 1, js_clearInterval),
-extern void clearInterval(int32_t);
-static JSValue js_clearInterval(JSContext *ctx, JSValueConst this_val,
-                                int argc, JSValueConst *argv)
-{
-    int32_t id;
-
-    if (argc != 1) {
-        return JS_EXCEPTION;
-    }
-
-    if (JS_ToInt32(ctx, &id, argv[0])) {
-        return JS_EXCEPTION;
-    }
-    clearInterval(id);
-
-    return JS_UNDEFINED;
-}
-
-#define CLEANTIMEOUTS JS_CFUNC_DEF("cleanTimeouts", 0, js_cleanTimeouts),
-extern void cleanTimeouts();
-static JSValue js_cleanTimeouts(JSContext *ctx, JSValueConst this_val,
-                                int argc, JSValueConst *argv)
-{
-    cleanTimeouts();
-    return JS_UNDEFINED;
-}
-
-
-#define PARSEURL JS_CFUNC_DEF("parseURL", 1, js_parseURL),
-extern char* parseURL(const char*);
-static JSValue js_parseURL(JSContext *ctx, JSValueConst this_val,
-                           int argc, JSValueConst *argv)
-{
-    const char *str;
-    const char *result;
-    size_t resultLen;
-    JSValue obj;
-
-    if (argc != 1) {
-        return JS_EXCEPTION;
-    }
-
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str) {
-        return JS_EXCEPTION;
-    }
-
-    result = parseURL(str);
-    JS_FreeCString(ctx, str);
-    resultLen = strlen(result);
-
-    obj = JS_ParseJSON(ctx, result, resultLen, "<input>");
+    obj = JS_ParseJSON(ctx, result, strlen(result), "<output>");
 #ifdef free
 #undef free
 #endif
     free((void*)result);
 
-    if (JS_IsException(obj)) {
-        JS_FreeValue(ctx, obj);
-        return JS_EXCEPTION;
-    }
-
     return obj;
 }
 
-#define ALERT JS_CFUNC_DEF("alert", 1, js_alert),
-extern void alert(const char*);
-static JSValue js_alert(JSContext *ctx, JSValueConst this_val,
-                        int argc, JSValueConst *argv)
-{
-    const char *str;
-
-    if (argc != 1) {
-        return JS_EXCEPTION;
-    }
-
-    str = JS_ToCString(ctx, argv[0]);
-    if (!str) {
-        return JS_EXCEPTION;
-    }
-
-    alert(str);
-
-    JS_FreeCString(ctx, str);
-
-    return JS_UNDEFINED;
-}
-
-#define PROMPT JS_CFUNC_DEF("prompt", 2, js_prompt),
-extern const char* prompt(const char*, const char*);
-static JSValue js_prompt(JSContext *ctx, JSValueConst this_val,
-                         int argc, JSValueConst *argv)
-{
-    const char *quest, *def, *res;
-    JSValue val;
-
-    if (argc < 1 || argc > 2) {
-        return JS_EXCEPTION;
-    }
-
-    quest = JS_ToCString(ctx, argv[0]);
-    if (!quest) {
-        return JS_EXCEPTION;
-    }
-
-    if (argc == 2) {
-        def = JS_ToCString(ctx, argv[1]);
-        if (!def) {
-            JS_FreeCString(ctx, quest);
-            return JS_EXCEPTION;
-        }
-        res = prompt(quest, def);
-        JS_FreeCString(ctx, def);
-    } else {
-        res = prompt(quest, "");
-    }
-
-    JS_FreeCString(ctx, quest);
-    if (res) {
-        val = JS_NewStringLen(ctx, res, strlen(res));
-
-#ifdef free
-#undef free
-#endif
-        free((void*)res);
-    } else {
-        val = JS_NULL;
-    }
-
-    return val;
-}
-
-#define EXTRA SEND SETTIMEOUT CLEARTIMEOUT SETINTERVAL CLEARINTERVAL CLEANTIMEOUTS PARSEURL ALERT PROMPT DEBUGME
+#define EXTRA CALLEXTERNALFUNCTION DUMP

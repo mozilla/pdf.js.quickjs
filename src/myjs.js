@@ -21,42 +21,20 @@
 mergeInto(LibraryManager.library, {
   $externals__postset: "externals();",
   $externals: function () {
-    const externals = window["sandboxExternals"];
-    _setTimeout = (id, n) => externals["setTimeout"](id, n);
-    _clearTimeout = (id) => externals["clearTimeout"](id);
-    _setInterval = (id, n) => externals["setInterval"](id, n);
-    _clearInterval = (id) => externals["clearInterval"](id);
-    _cleanTimeouts = () => externals["cleanTimeouts"]();
-    _alert = (s) => externals["alert"](UTF8ToString(s));
-    _prompt = (q, d) => {
-      const response = externals["prompt"](UTF8ToString(q), UTF8ToString(d));
-      if (response !== null) {
-        return stringToNewUTF8(response);
+    _callExternalFunction = (name, args) => {
+      name = UTF8ToString(name);
+      args = args !== null ? UTF8ToString(args) : null;
+      const result = Module["externalCall"](name, args);
+      if (!result) {
+        return null;
       }
-      return null;
-    }
-    _parseURL = (s) => stringToNewUTF8(externals["parseURL"](UTF8ToString(s)));
-    _sendToWindow = (s) => externals["send"](UTF8ToString(s));
+
+      return stringToNewUTF8(result);
+    };
   },
-  setTimeout: function () {},
-  setTimeout__deps: ["$externals"],
-  clearTimeout: function () {},
-  clearTimeout__deps: ["$externals"],
-  setInterval: function () {},
-  setInterval__deps: ["$externals"],
-  clearInterval: function () {},
-  clearInterval__deps: ["$externals"],
-  cleanTimeouts: function () {},
-  cleanTimeouts__deps: ["$externals"],
-  alert: function () {},
-  alert__deps: ["$externals"],
-  prompt: function () {},
-  prompt__deps: ["$externals", "$stringToNewUTF8"],
-  parseURL: function () {},
-  parseURL__deps: ["$externals", "$stringToNewUTF8"],
-  sendToWindow: function () {},
-  sendToWindow__deps: ["$externals", "$stringToNewUTF8"],
-  debugMe: function (ptr, alert) {
+  callExternalFunction: function () {},
+  callExternalFunction__deps: ["$externals", "$stringToNewUTF8"],
+  dump: function (ptr, alert) {
     const string = UTF8ToString(ptr);
     let data;
     try {
@@ -67,7 +45,7 @@ mergeInto(LibraryManager.library, {
     if (alert !== 0) {
       window.alert(string);
     } else {
-      window.console.log("DEBUGME", data);
+      window.console.log("DUMP", data);
     }
   },
   printError: function (name_ptr, message_ptr, stack_ptr, alertOnError) {

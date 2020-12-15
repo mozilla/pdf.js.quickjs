@@ -107,7 +107,7 @@ void nukeSandbox() {
     runtime = NULL;
 }
 
-BOOL initSandbox(const char* init, int alertOnError) {
+BOOL init(const char* init, int alertOnError) {
     JSValue result;
 
     if (unlikely(runtime)) {
