@@ -118,7 +118,7 @@ BOOL init(const char* init, int alertOnError) {
     ctx = JS_NewContext(runtime);
     globalAlertOnError = alertOnError;
 
-    result = JS_Eval(ctx, init, strlen(init), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    result = JS_Eval(ctx, init, strlen(init), "<initScript>", JS_EVAL_TYPE_GLOBAL);
     if (buildAndPrintError(result, alertOnError)) {
         JS_FreeValue(ctx, result);
         return FALSE;

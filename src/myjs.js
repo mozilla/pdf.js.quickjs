@@ -21,15 +21,20 @@
 mergeInto(LibraryManager.library, {
   $externals__postset: "externals();",
   $externals: function () {
-    _callExternalFunction = (name, args) => {
+    _callExternalFunction = (name, args, isError) => {
       name = UTF8ToString(name);
       args = args !== null ? JSON.parse(UTF8ToString(args)) : [];
-      const result = Module["externalCall"](name, args);
-      if (!result) {
-        return null;
-      }
+      try {
+        const result = Module["externalCall"](name, args);
+        if (!result) {
+          return null;
+        }
 
-      return stringToNewUTF8(result);
+        return stringToNewUTF8(result);
+      } catch (error) {
+        Module["HEAPU8"][isError] = 1;
+        return stringToNewUTF8(error.message);
+      }
     };
   },
   callExternalFunction: function () {},

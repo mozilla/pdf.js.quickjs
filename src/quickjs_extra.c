@@ -53,11 +53,12 @@ static JSValue js_dump(JSContext *ctx, JSValueConst this_val,
 }
 
 #define CALLEXTERNALFUNCTION JS_CFUNC_DEF("callExternalFunction", 2, js_callExternalFunction),
-extern const char* callExternalFunction(const char*, const char*);
+extern const char* callExternalFunction(const char*, const char*, char* isError);
 static JSValue js_callExternalFunction(JSContext *ctx, JSValueConst this_val,
                                        int argc, JSValueConst *argv)
 {
     const char *name, *str = NULL, *result;
+    char isError = 0;
     JSValue json, obj;
 
     if (argc < 1 || argc > 2) {
@@ -83,7 +84,7 @@ static JSValue js_callExternalFunction(JSContext *ctx, JSValueConst this_val,
         }
     }
 
-    result = callExternalFunction(name, str);
+    result = callExternalFunction(name, str, &isError);
     JS_FreeCString(ctx, name);
     JS_FreeCString(ctx, str);
 
@@ -91,7 +92,21 @@ static JSValue js_callExternalFunction(JSContext *ctx, JSValueConst this_val,
         return JS_UNDEFINED;
     }
 
-    obj = JS_ParseJSON(ctx, result, strlen(result), "<output>");
+    if (likely(!isError)) {
+        obj = JS_ParseJSON(ctx, result, strlen(result), "<callExternalFunction>");
+    } else {
+        obj = JS_NewError(ctx);
+        if (unlikely(JS_IsException(obj))) {
+            /* out of memory: throw JS_NULL to avoid recursing */
+            obj = JS_NULL;
+        } else {
+            JS_DefinePropertyValue(ctx, obj, JS_ATOM_message,
+                                   JS_NewString(ctx, result),
+                                   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+        }
+
+        obj = JS_Throw(ctx, obj);
+    }
 #ifdef free
 #undef free
 #endif
