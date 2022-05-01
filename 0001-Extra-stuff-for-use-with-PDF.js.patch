@@ -1,17 +1,17 @@
-From bac48ee16a636897ff4c8e32222833fef7a50c08 Mon Sep 17 00:00:00 2001
+From 55b67f754f6f09d9640eaa2e926d8ef6f76620e2 Mon Sep 17 00:00:00 2001
 From: Calixte Denizet <calixte.denizet@gmail.com>
 Date: Wed, 7 Oct 2020 15:59:11 +0200
 Subject: [PATCH] Extra stuff for use with PDF.js
 
 ---
- quickjs.c | 3 +++
- 1 file changed, 3 insertions(+)
+ quickjs.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
 
 diff --git a/quickjs.c b/quickjs.c
-index efc1d54..985bebd 100644
+index 7916013..32d7600 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -47444,6 +47444,8 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
+@@ -47852,6 +47852,8 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
      return string_buffer_end(b);
  }
  
@@ -20,7 +20,7 @@ index efc1d54..985bebd 100644
  /* global object */
  
  static const JSCFunctionListEntry js_global_funcs[] = {
-@@ -47467,6 +47469,7 @@ static const JSCFunctionListEntry js_global_funcs[] = {
+@@ -47875,6 +47877,7 @@ static const JSCFunctionListEntry js_global_funcs[] = {
      //JS_CFUNC_DEF("__date_now", 0, js___date_now ),
      //JS_CFUNC_DEF("__date_getTimezoneOffset", 1, js___date_getTimezoneOffset ),
      //JS_CFUNC_DEF("__date_create", 3, js___date_create ),
@@ -28,6 +28,33 @@ index efc1d54..985bebd 100644
  };
  
  /* Date */
+@@ -47891,8 +47894,10 @@ static int64_t floor_div(int64_t a, int64_t b) {
+     return (a - (m + (m < 0) * b)) / b;
+ }
+ 
++#if 0
+ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv);
++#endif
+ 
+ static __exception int JS_ThisTimeValue(JSContext *ctx, double *valp, JSValueConst this_val)
+ {
+@@ -48444,6 +48449,7 @@ static int string_get_month(JSString *sp, int *pp, int64_t *pval) {
+     return 0;
+ }
+ 
++#if 0
+ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
+                              int argc, JSValueConst *argv)
+ {
+@@ -48606,6 +48612,7 @@ done:
+     JS_FreeValue(ctx, s);
+     return rv;
+ }
++#endif
+ 
+ static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
+                            int argc, JSValueConst *argv)
 -- 
-2.28.0
+2.25.1
 

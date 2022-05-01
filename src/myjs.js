@@ -68,4 +68,8 @@ mergeInto(LibraryManager.library, {
     const string = UTF8ToString(ptr);
     window.console.log(string);
   },
+  parseDate: function (ptr) {
+    const string = UTF8ToString(ptr);
+    return Date.parse(string);
+  },
 });

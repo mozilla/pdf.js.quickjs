@@ -115,4 +115,20 @@ static JSValue js_callExternalFunction(JSContext *ctx, JSValueConst this_val,
     return obj;
 }
 
+extern double parseDate(const char*);
+static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
+                             int argc, JSValueConst *argv)
+{
+    double d;
+    const char *s = JS_ToCString(ctx, argv[0]);
+    if (!s) {
+        return JS_EXCEPTION;
+    }
+
+    d = parseDate(s);
+    JS_FreeCString(ctx, s);
+
+    return JS_NewFloat64(ctx, d);
+}
+
 #define EXTRA CALLEXTERNALFUNCTION DUMP
