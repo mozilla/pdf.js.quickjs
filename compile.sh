@@ -5,7 +5,7 @@ INPUT=${INPUT:=src}
 QUICKJS=${QUICKJS:=./quickjs}
 
 emcc -o ${OUTPUT}/quickjs-eval.js \
-        ${INPUT}/exports.c ${QUICKJS}/quickjs.c ${QUICKJS}/cutils.c ${QUICKJS}/libregexp.c ${QUICKJS}/libunicode.c \
+        ${INPUT}/exports.c ${QUICKJS}/quickjs.c ${QUICKJS}/cutils.c ${QUICKJS}/libbf.c ${QUICKJS}/libregexp.c ${QUICKJS}/libunicode.c \
         -I${QUICKJS} \
         -I${INPUT} \
         -DCONFIG_VERSION="\"1.0.0\"" \

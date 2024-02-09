@@ -1,17 +1,17 @@
-From 55b67f754f6f09d9640eaa2e926d8ef6f76620e2 Mon Sep 17 00:00:00 2001
+From f7a513c626e9aae5c431ed13bb60838e2a548650 Mon Sep 17 00:00:00 2001
 From: Calixte Denizet <calixte.denizet@gmail.com>
-Date: Wed, 7 Oct 2020 15:59:11 +0200
+Date: Fri, 9 Feb 2024 09:54:34 +0100
 Subject: [PATCH] Extra stuff for use with PDF.js
 
 ---
- quickjs.c | 7 +++++++
- 1 file changed, 7 insertions(+)
+ quickjs.c | 10 +++++++---
+ 1 file changed, 7 insertions(+), 3 deletions(-)
 
 diff --git a/quickjs.c b/quickjs.c
-index 7916013..32d7600 100644
+index 4e58a98..b103501 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -47852,6 +47852,8 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
+@@ -49247,6 +49247,8 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
      return string_buffer_end(b);
  }
  
@@ -20,18 +20,19 @@ index 7916013..32d7600 100644
  /* global object */
  
  static const JSCFunctionListEntry js_global_funcs[] = {
-@@ -47875,6 +47877,7 @@ static const JSCFunctionListEntry js_global_funcs[] = {
-     //JS_CFUNC_DEF("__date_now", 0, js___date_now ),
-     //JS_CFUNC_DEF("__date_getTimezoneOffset", 1, js___date_getTimezoneOffset ),
-     //JS_CFUNC_DEF("__date_create", 3, js___date_create ),
+@@ -49264,6 +49266,7 @@ static const JSCFunctionListEntry js_global_funcs[] = {
+     JS_PROP_DOUBLE_DEF("Infinity", 1.0 / 0.0, 0 ),
+     JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
+     JS_PROP_UNDEFINED_DEF("undefined", 0 ),
 +    EXTRA
  };
  
  /* Date */
-@@ -47891,8 +47894,10 @@ static int64_t floor_div(int64_t a, int64_t b) {
+@@ -49279,9 +49282,10 @@ static int64_t floor_div(int64_t a, int64_t b) {
+     int64_t m = a % b;
      return (a - (m + (m < 0) * b)) / b;
  }
- 
+-
 +#if 0
  static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv);
@@ -39,22 +40,24 @@ index 7916013..32d7600 100644
  
  static __exception int JS_ThisTimeValue(JSContext *ctx, double *valp, JSValueConst this_val)
  {
-@@ -48444,6 +48449,7 @@ static int string_get_month(JSString *sp, int *pp, int64_t *pval) {
+@@ -49834,7 +49838,7 @@ static int string_get_month(JSString *sp, int *pp, int64_t *pval) {
+     *pp += 3;
      return 0;
  }
- 
+-
 +#if 0
  static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)
  {
-@@ -48606,6 +48612,7 @@ done:
+@@ -49997,7 +50001,7 @@ done:
      JS_FreeValue(ctx, s);
      return rv;
  }
+-
 +#endif
- 
  static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv)
+ {
 -- 
 2.25.1
 
