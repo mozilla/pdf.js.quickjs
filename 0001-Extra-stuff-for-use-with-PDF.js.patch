@@ -1,4 +1,4 @@
-From 8651097e4f686223b7e2d5df626ddef0dae21c05 Mon Sep 17 00:00:00 2001
+From dce526f8e5471cf28c646270d71ab3f23d6be822 Mon Sep 17 00:00:00 2001
 From: calixteman <calixte.denizet@gmail.com>
 Date: Sat, 21 Feb 2026 15:07:37 +0100
 Subject: [PATCH] Extra stuff for use with PDF.js
@@ -8,10 +8,10 @@ Subject: [PATCH] Extra stuff for use with PDF.js
  1 file changed, 7 insertions(+)
 
 diff --git a/quickjs.c b/quickjs.c
-index 0004383..e7df214 100644
+index fa5a7a9..4b83154 100644
 --- a/quickjs.c
 +++ b/quickjs.c
-@@ -51023,6 +51023,8 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
+@@ -54762,6 +54762,8 @@ static JSValue js_global_unescape(JSContext *ctx, JSValueConst this_val,
      return string_buffer_end(b);
  }
  
@@ -20,15 +20,15 @@ index 0004383..e7df214 100644
  /* global object */
  
  static const JSCFunctionListEntry js_global_funcs[] = {
-@@ -51041,6 +51043,7 @@ static const JSCFunctionListEntry js_global_funcs[] = {
-     JS_PROP_DOUBLE_DEF("NaN", NAN, 0 ),
+@@ -54781,6 +54783,7 @@ static const JSCFunctionListEntry js_global_funcs[] = {
      JS_PROP_UNDEFINED_DEF("undefined", 0 ),
      JS_PROP_STRING_DEF("[Symbol.toStringTag]", "global", JS_PROP_CONFIGURABLE ),
+     JS_CFUNC_DEF("eval", 1, js_global_eval ),
 +    EXTRA
  };
  
  /* Date */
-@@ -51057,8 +51060,10 @@ static int64_t floor_div(int64_t a, int64_t b) {
+@@ -54797,8 +54800,10 @@ static int64_t floor_div(int64_t a, int64_t b) {
      return (a - (m + (m < 0) * b)) / b;
  }
  
@@ -39,7 +39,7 @@ index 0004383..e7df214 100644
  
  static __exception int JS_ThisTimeValue(JSContext *ctx, double *valp, JSValueConst this_val)
  {
-@@ -51924,6 +51929,7 @@ static BOOL js_date_parse_otherstring(const uint8_t *sp,
+@@ -55677,6 +55682,7 @@ static BOOL js_date_parse_otherstring(const uint8_t *sp,
      return TRUE;
  }
  
@@ -47,7 +47,7 @@ index 0004383..e7df214 100644
  static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
                               int argc, JSValueConst *argv)
  {
-@@ -51973,6 +51979,7 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
+@@ -55726,6 +55732,7 @@ static JSValue js_Date_parse(JSContext *ctx, JSValueConst this_val,
      JS_FreeValue(ctx, s);
      return rv;
  }
@@ -56,5 +56,5 @@ index 0004383..e7df214 100644
  static JSValue js_Date_now(JSContext *ctx, JSValueConst this_val,
                             int argc, JSValueConst *argv)
 -- 
-2.50.1 (Apple Git-155)
+2.53.0
 
