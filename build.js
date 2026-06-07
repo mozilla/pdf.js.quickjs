@@ -45,9 +45,7 @@ function create() {
 
 function build(path) {
   const workingDir = resolve(".");
-  const uid = process.getuid();
-  const gid = process.getgid();
-  return execAndPrint("docker", [
+  const args = [
     "run",
     "-t",
     "-v",
@@ -55,10 +53,15 @@ function build(path) {
     "-v",
     `${workingDir}:/code`,
     "--rm",
-    "--user",
-    `${uid}:${gid}`,
-    "qjs-sandbox",
-  ]);
+  ];
+  // process.getuid/getgid aren't available on Windows. They're used to make
+  // the generated files owned by the current user instead of root, which is
+  // only a concern on POSIX platforms.
+  if (process.getuid && process.getgid) {
+    args.push("--user", `${process.getuid()}:${process.getgid()}`);
+  }
+  args.push("qjs-sandbox");
+  return execAndPrint("docker", args);
 }
 
 async function hasImage() {
