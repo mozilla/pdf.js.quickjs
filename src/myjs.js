@@ -44,7 +44,7 @@ mergeInto(LibraryManager.library, {
     let data;
     try {
       data = window.JSON.parse(string);
-    } catch (_) {
+    } catch {
       data = string;
     }
     if (alert !== 0) {
