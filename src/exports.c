@@ -200,16 +200,27 @@ void dumpMemoryUse() {
     JSMemoryUsage stats;
     char *output;
     FILE *file;
+    const size_t size = 4096;
 
     if (!runtime) {
         return;
     }
 
-    output = (char*)malloc(sizeof(char) * 1024);
-    file = fmemopen(output, 1024, "w");
+    output = (char*)malloc(size);
+    if (!output) {
+        return;
+    }
+
+    file = fmemopen(output, size, "w");
+    if (!file) {
+        free(output);
+        return;
+    }
 
     JS_ComputeMemoryUsage(runtime, &stats);
     JS_DumpMemoryUsage(file, &stats, runtime);
+    /* fmemopen null-terminates within the buffer on close, so the dump is
+     * safely truncated rather than overrunning if it exceeds `size`. */
     fclose(file);
 
     logMemUse(output);
