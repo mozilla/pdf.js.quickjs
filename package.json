@@ -17,5 +17,5 @@
   "overrides": {
     "fast-uri": ">=3.1.2"
   },
-  "license": "Apache-2.0"
+  "license": "MIT"
 }
