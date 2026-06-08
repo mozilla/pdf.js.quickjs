@@ -72,4 +72,7 @@ mergeInto(LibraryManager.library, {
     const string = UTF8ToString(ptr);
     return Date.parse(string);
   },
+  getTimestamp: function () {
+    return Date.now();
+  },
 });

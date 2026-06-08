@@ -20,6 +20,7 @@ emcc -o "${OUTPUT}/${OUTPUT_FILE}" \
         -DEMSCRIPTEN \
         -s ALLOW_MEMORY_GROWTH=1 \
         -s MAXIMUM_MEMORY=2GB \
+        -s STACK_SIZE=1048576 \
         -s WASM=1 \
         -s MODULARIZE=1 \
         -s EXPORT_NAME="'QuickJS'" \

@@ -30,6 +30,45 @@ static JSContext* ctx = NULL;
 static JSValue commFunction = 0;
 static int globalAlertOnError = 0;
 
+/* Resource limits applied to every sandbox runtime to bound the cost of
+ * running untrusted PDF scripts. Tune as needed. */
+#define SANDBOX_MEMORY_LIMIT ((size_t)256 * 1024 * 1024) /* bytes */
+#define SANDBOX_STACK_SIZE   ((size_t)256 * 1024)        /* bytes; keep < the wasm STACK_SIZE in compile.sh */
+#define SANDBOX_MAX_EVAL_MS  10000.0                     /* per eval/call wall-clock budget */
+
+/* Monotonic-ish timestamp (ms) provided by the host (see myjs.js). Used to
+ * enforce SANDBOX_MAX_EVAL_MS via the interrupt handler. */
+extern double getTimestamp(void);
+
+/* When non-zero, the time (ms) at which the current eval/call must abort. */
+static double deadline = 0;
+
+static int interruptHandler(JSRuntime* rt, void* opaque) {
+    (void)rt;
+    (void)opaque;
+    return deadline != 0 && getTimestamp() >= deadline;
+}
+
+static void startDeadline(void) {
+    deadline = getTimestamp() + SANDBOX_MAX_EVAL_MS;
+}
+
+static void clearDeadline(void) {
+    deadline = 0;
+}
+
+/* Create the runtime/context (if needed) with the sandbox resource limits. */
+static void ensureRuntime(void) {
+    if (likely(runtime)) {
+        return;
+    }
+    runtime = JS_NewRuntime();
+    JS_SetMemoryLimit(runtime, SANDBOX_MEMORY_LIMIT);
+    JS_SetMaxStackSize(runtime, SANDBOX_STACK_SIZE);
+    JS_SetInterruptHandler(runtime, interruptHandler, NULL);
+    ctx = JS_NewContext(runtime);
+}
+
 static const char* getPropAsString(JSContext* ctx, JSValue obj, const char* name) {
     JSAtom prop = JS_NewAtom(ctx, name);
     JSValue val = JS_GetProperty(ctx, obj, prop);
@@ -84,12 +123,11 @@ static BOOL buildAndPrintError(JSValueConst v, int alertOnError) {
 void evalInSandbox(const char* str, int alertOnError) {
     JSValue result;
 
-    if (unlikely(!runtime)) {
-        runtime = JS_NewRuntime();
-        ctx = JS_NewContext(runtime);
-    }
+    ensureRuntime();
 
+    startDeadline();
     result = JS_Eval(ctx, str, strlen(str), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+    clearDeadline();
     buildAndPrintError(result, alertOnError);
     JS_FreeValue(ctx, result);
 }
@@ -114,11 +152,12 @@ BOOL init(const char* init, int alertOnError) {
         nukeSandbox();
     }
 
-    runtime = JS_NewRuntime();
-    ctx = JS_NewContext(runtime);
+    ensureRuntime();
     globalAlertOnError = alertOnError;
 
+    startDeadline();
     result = JS_Eval(ctx, init, strlen(init), "<initScript>", JS_EVAL_TYPE_GLOBAL);
+    clearDeadline();
     if (buildAndPrintError(result, alertOnError)) {
         JS_FreeValue(ctx, result);
         return FALSE;
@@ -146,7 +185,9 @@ void commFun(const char* name, const char* str) {
     }
 
     JSValueConst args[2] = { funName, result };
+    startDeadline();
     result = JS_Call(ctx, commFunction, JS_UNDEFINED, 2, args);
+    clearDeadline();
     JS_FreeValue(ctx, args[0]);
     JS_FreeValue(ctx, args[1]);
 
