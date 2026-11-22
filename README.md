@@ -42,6 +42,17 @@ to compile. The short version is:
 node build.js -Cco my_output_dir
 ```
 
+## Release
+
+Pushing a version tag (e.g. `v1.2.3`) runs the `Release` workflow: it builds the sandbox and opens a pull request in [pdf.js](https://github.com/mozilla/pdf.js) updating `external/quickjs/`, titled "Update QuickJS sandbox to version 1.2.3":
+
+```sh
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The workflow runs in the `release` environment, which must provide the `CLIENT_ID` and `APP_PRIVATE_KEY` secrets of a GitHub App installed on `mozilla/pdf.js` with read and write access to contents and pull requests.
+
 ## Licensing
 
 The code is released under [MIT license](https://opensource.org/licenses/MIT).

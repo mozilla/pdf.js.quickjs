@@ -1,0 +1,157 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+# Serialize retries of the same tag.
+concurrency:
+  group: release-${{ github.ref_name }}
+
+jobs:
+  release:
+    name: Update the sandbox in pdf.js
+    runs-on: ubuntu-latest
+    environment: release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js LTS
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: lts/*
+          # No cache: it could be poisoned and end up in the release.
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the sandbox
+        run: |
+          mkdir -p "${RUNNER_TEMP}/out"
+          node build.js --create --compile --output "${RUNNER_TEMP}/out"
+
+      - name: Verify and read the build metadata
+        id: info
+        run: |
+          expected=$(git rev-parse HEAD)
+          node - "${RUNNER_TEMP}/out/quickjs-eval.wasm" "${expected}" <<'EOF'
+          const { appendFileSync, readFileSync } = require("node:fs");
+          const [, , filename, expected] = process.argv;
+          const wasm = new WebAssembly.Module(readFileSync(filename));
+          const [section] = WebAssembly.Module.customSections(wasm, "build_info");
+          if (!section) {
+            throw new Error("No build_info section in quickjs-eval.wasm");
+          }
+          const info = JSON.parse(new TextDecoder().decode(section));
+          if (info.repo !== expected) {
+            throw new Error(`The wasm was built from ${info.repo}, expected ${expected}`);
+          }
+          const outputs = ["quickjs", "repo", "emscripten"].map((key) => {
+            const value = info[key];
+            if (typeof value !== "string" || !value || /[^\w.-]/.test(value)) {
+              throw new Error(`Invalid ${key} in build_info: ${value}`);
+            }
+            return `${key}=${value}\n`;
+          });
+          appendFileSync(process.env.GITHUB_OUTPUT, outputs.join(""));
+          EOF
+
+      - name: Generate app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: mozilla
+          repositories: pdf.js
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout pdf.js
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mozilla/pdf.js
+          path: pdf.js
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+
+      - name: Create the pull request
+        working-directory: pdf.js
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ github.ref_name }}
+          REPO_REVISION: ${{ steps.info.outputs.repo }}
+          QUICKJS_REVISION: ${{ steps.info.outputs.quickjs }}
+          EMSCRIPTEN_VERSION: ${{ steps.info.outputs.emscripten }}
+        run: |
+          VERSION="${TAG#v}"
+          if [[ ! ${VERSION} =~ ^[0-9A-Za-z._-]+$ ]]; then
+            echo "Invalid version: ${VERSION}" >&2
+            exit 1
+          fi
+          REPO=mozilla/pdf.js
+          BASE=master
+          BRANCH="update-quickjs-${VERSION}"
+          BRANCH_REF="refs/heads/${BRANCH}"
+          TITLE="Update QuickJS sandbox to version ${VERSION}"
+          FILES=(external/quickjs/{quickjs-eval.js,quickjs-eval.wasm})
+
+          PR_URL=$(gh api "repos/${REPO}/pulls?head=${REPO%/*}:${BRANCH}&base=${BASE}&state=open" |
+            jq -r --arg repo "${REPO}" 'first(.[] | select(.head.repo.full_name == $repo) | .html_url) // empty')
+          if [ -n "${PR_URL}" ]; then
+            echo "A pull request already exists for ${BRANCH}: ${PR_URL}"
+            exit 0
+          fi
+
+          for FILE in "${FILES[@]}"; do
+            cp "${RUNNER_TEMP}/out/${FILE##*/}" "${FILE}"
+          done
+          git add -- "${FILES[@]}"
+          if git diff --cached --quiet; then
+            echo "The sandbox in pdf.js is already up to date."
+            exit 0
+          fi
+
+          REMOTE_BRANCH=$(git ls-remote --refs origin "${BRANCH_REF}")
+          if [[ -n ${REMOTE_BRANCH} ]]; then
+            # Reuse a branch from a run that failed to open its PR.
+            git fetch --no-tags --depth=1 origin "${BRANCH_REF}"
+            REVISION=$(git rev-parse FETCH_HEAD)
+            if ! git diff --cached --quiet "${REVISION}" -- "${FILES[@]}"; then
+              echo "The existing branch ${BRANCH} does not match the rebuilt sandbox." >&2
+              exit 1
+            fi
+            if ! gh api "repos/${REPO}/compare/${BASE}...${REVISION}?per_page=1" |
+              jq -e --args '
+                .files | length > 0 and all(.[];
+                  IN(.filename; $ARGS.positional[]) and (.status | IN("added", "modified")))
+              ' "${FILES[@]}" > /dev/null; then
+              echo "Unable to verify that ${BRANCH} changes only the sandbox files." >&2
+              exit 1
+            fi
+          else
+            git -c 'user.name=github-actions[bot]' \
+              -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
+              commit -m "${TITLE}"
+            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}"
+            # An empty lease requires the remote branch to be absent.
+            git push --force-with-lease="${BRANCH_REF}:" origin "HEAD:${BRANCH_REF}"
+          fi
+
+          gh pr create --repo "${REPO}" --base "${BASE}" --head "${BRANCH}" \
+            --title "${TITLE}" --body-file - <<EOF
+          - pdf.js.quickjs version: ${VERSION}
+          - pdf.js.quickjs commit: [\`${REPO_REVISION}\`](https://github.com/mozilla/pdf.js.quickjs/commit/${REPO_REVISION})
+          - QuickJS commit: [\`${QUICKJS_REVISION}\`](https://github.com/bellard/quickjs/commit/${QUICKJS_REVISION})
+          - Emscripten version: ${EMSCRIPTEN_VERSION}
+          EOF
