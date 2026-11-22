@@ -46,14 +46,13 @@ jobs:
         run: |
           expected=$(git rev-parse HEAD)
           node - "${RUNNER_TEMP}/out/quickjs-eval.wasm" "${expected}" <<'EOF'
-          const { appendFileSync, readFileSync } = require("node:fs");
+          const { appendFileSync } = require("node:fs");
+          const { readBuildMetadata } = require("./build_metadata.js");
           const [, , filename, expected] = process.argv;
-          const wasm = new WebAssembly.Module(readFileSync(filename));
-          const [section] = WebAssembly.Module.customSections(wasm, "build_info");
-          if (!section) {
+          const info = readBuildMetadata(filename);
+          if (info === undefined) {
             throw new Error("No build_info section in quickjs-eval.wasm");
           }
-          const info = JSON.parse(new TextDecoder().decode(section));
           if (info.repo !== expected) {
             throw new Error(`The wasm was built from ${info.repo}, expected ${expected}`);
           }
@@ -122,12 +121,10 @@ jobs:
           # Only replace a sandbox built from an ancestor of this revision, so that
           # retrying an old tag can't revert a newer release.
           VENDORED_REVISION=$(node - "external/quickjs/quickjs-eval.wasm" <<'EOF'
-          const { readFileSync } = require("node:fs");
-          const [, , filename] = process.argv;
-          const wasm = new WebAssembly.Module(readFileSync(filename));
-          const [section] = WebAssembly.Module.customSections(wasm, "build_info");
-          if (section) {
-            const { repo } = JSON.parse(new TextDecoder().decode(section));
+          const { readBuildMetadata } = require("../build_metadata.js");
+          const info = readBuildMetadata(process.argv[2]);
+          if (info !== undefined) {
+            const { repo } = info;
             if (typeof repo !== "string" || !/^[0-9a-f]{40}$/.test(repo)) {
               throw new Error(`Unable to compare with the vendored sandbox built from ${repo}`);
             }
@@ -152,31 +149,24 @@ jobs:
             exit 0
           fi
 
+          # An empty lease requires the branch to be absent.
+          LEASE=
           REMOTE_BRANCH=$(git ls-remote --refs origin "${BRANCH_REF}")
           if [[ -n ${REMOTE_BRANCH} ]]; then
-            # Reuse a branch from a run that failed to open its PR.
+            # Verify the old branch before replacing it with a commit on the current base.
             git fetch --no-tags --depth=1 origin "${BRANCH_REF}"
-            REVISION=$(git rev-parse FETCH_HEAD)
-            if ! git diff --cached --quiet "${REVISION}" -- "${FILES[@]}"; then
+            LEASE=$(git rev-parse FETCH_HEAD)
+            if ! git diff --cached --quiet "${LEASE}" -- "${FILES[@]}"; then
               echo "The existing branch ${BRANCH} does not match the rebuilt sandbox." >&2
               exit 1
             fi
-            if ! gh api "repos/${REPO}/compare/${BASE}...${REVISION}?per_page=1" |
-              jq -e --args '
-                .files | length > 0 and all(.[];
-                  IN(.filename; $ARGS.positional[]) and (.status | IN("added", "modified")))
-              ' "${FILES[@]}" > /dev/null; then
-              echo "Unable to verify that ${BRANCH} changes only the sandbox files." >&2
-              exit 1
-            fi
-          else
-            git -c 'user.name=github-actions[bot]' \
-              -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
-              commit -m "${TITLE}"
-            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}"
-            # An empty lease requires the remote branch to be absent.
-            git push --force-with-lease="${BRANCH_REF}:" origin "HEAD:${BRANCH_REF}"
           fi
+
+          git -c 'user.name=github-actions[bot]' \
+            -c user.email=41898282+github-actions[bot]@users.noreply.github.com \
+            commit -m "${TITLE}"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}"
+          git push --force-with-lease="${BRANCH_REF}:${LEASE}" origin "HEAD:${BRANCH_REF}"
 
           gh pr create --repo "${REPO}" --base "${BASE}" --head "${BRANCH}" \
             --title "${TITLE}" --body-file - <<EOF
