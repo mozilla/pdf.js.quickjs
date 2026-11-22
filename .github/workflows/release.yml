@@ -22,6 +22,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The full history is needed to check that the release isn't a downgrade.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Use Node.js LTS
@@ -115,6 +117,30 @@ jobs:
           if [ -n "${PR_URL}" ]; then
             echo "A pull request already exists for ${BRANCH}: ${PR_URL}"
             exit 0
+          fi
+
+          # Only replace a sandbox built from an ancestor of this revision, so that
+          # retrying an old tag can't revert a newer release.
+          VENDORED_REVISION=$(node - "external/quickjs/quickjs-eval.wasm" <<'EOF'
+          const { readFileSync } = require("node:fs");
+          const [, , filename] = process.argv;
+          const wasm = new WebAssembly.Module(readFileSync(filename));
+          const [section] = WebAssembly.Module.customSections(wasm, "build_info");
+          if (section) {
+            const { repo } = JSON.parse(new TextDecoder().decode(section));
+            if (typeof repo !== "string" || !/^[0-9a-f]{40}$/.test(repo)) {
+              throw new Error(`Unable to compare with the vendored sandbox built from ${repo}`);
+            }
+            process.stdout.write(repo);
+          }
+          EOF
+          )
+          if [[ -z ${VENDORED_REVISION} ]]; then
+            echo "The vendored sandbox has no build metadata."
+          elif ! git -C "${GITHUB_WORKSPACE}" merge-base --is-ancestor \
+              "${VENDORED_REVISION}" "${REPO_REVISION}"; then
+            echo "The vendored sandbox was built from ${VENDORED_REVISION}, which isn't an ancestor of ${REPO_REVISION}." >&2
+            exit 1
           fi
 
           for FILE in "${FILES[@]}"; do

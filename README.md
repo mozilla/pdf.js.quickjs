@@ -41,6 +41,8 @@ git tag v1.2.3
 git push origin v1.2.3
 ```
 
+The workflow refuses to replace a sandbox in pdf.js that was built from a revision which isn't an ancestor of the tagged one, so that retrying an old tag can't revert a newer release.
+
 The workflow runs in the `release` environment, which must provide the `CLIENT_ID` and `APP_PRIVATE_KEY` secrets of a GitHub App installed on `mozilla/pdf.js` with read and write access to contents and pull requests.
 
 ## Licensing
