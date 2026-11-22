@@ -10,7 +10,7 @@ Run:
 node build.js --compile --output my_output_dir
 ```
 
-it will create a Docker image with emsdk and then run it. The generated `quickjs-eval.js` will be in `my_output_dir`.
+This builds the Docker image using Docker's layer cache, then writes `quickjs-eval.js` and `quickjs-eval.wasm` to `my_output_dir`.
 
 ### Build metadata
 
@@ -24,23 +24,13 @@ const buildInfo = JSON.parse(new TextDecoder().decode(section));
 
 ## Update
 
-In order to update quickjs to a specific revision, change the commit hash in `Dockerfile` and then run:
-
-```sh
-node build.js --create
-```
-
-to create a new docker image and then
+To update QuickJS, change the commit hash in `Dockerfile` and run:
 
 ```sh
 node build.js --compile --output my_output_dir
 ```
 
-to compile. The short version is:
-
-```sh
-node build.js -Cco my_output_dir
-```
+Use `node build.js --create` to build only the Docker image.
 
 ## Release
 

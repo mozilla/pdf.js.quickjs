@@ -37,7 +37,7 @@ jobs:
       - name: Build the sandbox
         run: |
           mkdir -p "${RUNNER_TEMP}/out"
-          node build.js --create --compile --output "${RUNNER_TEMP}/out"
+          node build.js --compile --output "${RUNNER_TEMP}/out"
 
       - name: Verify and read the build metadata
         id: info
@@ -106,8 +106,12 @@ jobs:
           TITLE="Update QuickJS sandbox to version ${VERSION}"
           FILES=(external/quickjs/{quickjs-eval.js,quickjs-eval.wasm})
 
-          PR_URL=$(gh api "repos/${REPO}/pulls?head=${REPO%/*}:${BRANCH}&base=${BASE}&state=open" |
-            jq -r --arg repo "${REPO}" 'first(.[] | select(.head.repo.full_name == $repo) | .html_url) // empty')
+          # A merged release stays complete even if its branch has been deleted.
+          PR_URL=$(gh api --paginate "repos/${REPO}/pulls?head=${REPO%/*}:${BRANCH}&base=${BASE}&state=all" |
+            jq -rs --arg repo "${REPO}" '
+              first(.[][] | select(.head.repo.full_name == $repo and
+                (.state == "open" or .merged_at != null)) | .html_url) // empty
+            ')
           if [ -n "${PR_URL}" ]; then
             echo "A pull request already exists for ${BRANCH}: ${PR_URL}"
             exit 0
