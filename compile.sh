@@ -6,16 +6,11 @@ OUTPUT=${OUTPUT:=.}
 INPUT=${INPUT:=src}
 QUICKJS=${QUICKJS:=./quickjs}
 OUTPUT_FILE=${OUTPUT_FILE:=quickjs-eval.js}
+OBJCOPY="${EMSDK}/upstream/bin/llvm-objcopy"
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "${TMP_DIR}"' EXIT
 
-emcc -o "${OUTPUT}/${OUTPUT_FILE}" \
-        "${INPUT}/exports.c" \
-        "${QUICKJS}/quickjs.c" \
-        "${QUICKJS}/cutils.c" \
-        "${QUICKJS}/libregexp.c" \
-        "${QUICKJS}/libunicode.c" \
-        "${QUICKJS}/dtoa.c" \
-        -I"${QUICKJS}" \
-        -I"${INPUT}" \
+set -- \
         -DCONFIG_VERSION="\"1.0.0\"" \
         -DEMSCRIPTEN \
         -s ALLOW_MEMORY_GROWTH=1 \
@@ -38,8 +33,29 @@ emcc -o "${OUTPUT}/${OUTPUT_FILE}" \
         -s ASSERTIONS=0 \
         -DNDEBUG \
         -flto \
-        --closure 1 \
+        --closure 1
+BUILD_FLAGS="$*"
+
+emcc -o "${OUTPUT}/${OUTPUT_FILE}" \
+        "${INPUT}/exports.c" \
+        "${QUICKJS}/quickjs.c" \
+        "${QUICKJS}/cutils.c" \
+        "${QUICKJS}/libregexp.c" \
+        "${QUICKJS}/libunicode.c" \
+        "${QUICKJS}/dtoa.c" \
+        -I"${QUICKJS}" \
+        -I"${INPUT}" \
+        "$@" \
         --js-library "${INPUT}/myjs.js"
 
-chmod ugo-x "${OUTPUT}/quickjs-eval.wasm"
+WASM_FILE="${OUTPUT}/${OUTPUT_FILE%.js}.wasm"
+chmod ugo-x "${WASM_FILE}"
+
+echo "Adding build metadata to ${WASM_FILE}..."
+node "$(dirname "$0")/build_metadata.js" \
+    "${QUICKJS}" "${INPUT}" "$(emcc -dumpversion)" "${BUILD_FLAGS}" \
+    > "${TMP_DIR}/build_info.json"
+"${OBJCOPY}" --add-section=build_info="${TMP_DIR}/build_info.json" \
+    "${WASM_FILE}"
+
 sed -i '1 i\/* THIS FILE IS GENERATED - DO NOT EDIT */' "${OUTPUT}/${OUTPUT_FILE}"

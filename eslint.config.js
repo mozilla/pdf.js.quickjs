@@ -9,8 +9,13 @@ module.exports = [
   js.configs.recommended,
   prettier,
   {
-    // Build script and config: plain Node CommonJS.
-    files: ["build.js", "eslint.config.js"],
+    // Build scripts, tests and config: plain Node CommonJS.
+    files: [
+      "build.js",
+      "build_metadata.js",
+      "eslint.config.js",
+      "test/**/*.js",
+    ],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "commonjs",

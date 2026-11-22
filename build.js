@@ -24,6 +24,7 @@ const { ArgumentParser } = require("argparse");
 const fs = require("fs");
 const { spawn } = require("child_process");
 const { resolve } = require("path");
+const { getRepoRevision } = require("./build_metadata.js");
 
 function execAndPrint(fun, args) {
   const child = spawn(fun, args, { stdio: "inherit" });
@@ -48,6 +49,8 @@ function build(path) {
   const args = [
     "run",
     "-t",
+    "-e",
+    `REPO_REVISION=${getRepoRevision(workingDir)}`,
     "-v",
     `${path}:/js`,
     "-v",
