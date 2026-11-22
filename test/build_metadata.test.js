@@ -26,7 +26,7 @@ const { tmpdir } = require("node:os");
 const { join } = require("node:path");
 const { test } = require("node:test");
 
-test("build metadata records the revision and tracked changes", (t) => {
+test("build metadata records the revision and local changes", (t) => {
   const dir = mkdtempSync(join(tmpdir(), "quickjs-metadata-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -76,6 +76,13 @@ test("build metadata records the revision and tracked changes", (t) => {
   // The upstream revision is preferred to the patched checkout one.
   const upstream = "0123456789abcdef0123456789abcdef01234567";
   assert.equal(readMetadata({ QUICKJS_GIT_HASH: upstream }).quickjs, upstream);
+
+  git("config", "status.showUntrackedFiles", "no");
+  const untracked = join(dir, "untracked.h");
+  writeFileSync(untracked, "untracked\n");
+  assert.equal(readMetadata().repo, `${revision}-dirty`);
+  rmSync(untracked);
+  assert.equal(readMetadata().repo, revision);
 
   writeFileSync(source, "modified\n");
   assert.equal(readMetadata().repo, `${revision}-dirty`);
